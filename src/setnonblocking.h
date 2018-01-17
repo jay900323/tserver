@@ -1,13 +1,17 @@
-#ifndef _SETNONBLOCKING_H_
+﻿#ifndef _SETNONBLOCKING_H_
 #define _SETNONBLOCKING_H_
 
 #ifdef _WIN32
-int setnonblocking(int fd);
-int setblocking(int fd);
+#include <WinSock2.h>
+#endif
 
-#elif __linux__
+#ifdef _WIN32
 int setnonblocking(SOCKET s);
 int setblocking(SOCKET s);
+
+#elif __linux__
+int setnonblocking(int fd);
+int setblocking(int fd);
 #endif
 
 #endif

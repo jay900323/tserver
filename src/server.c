@@ -1,7 +1,9 @@
-#include "setnonblocking.h"
+ï»¿#include "setnonblocking.h"
 #include "config.h"
 #include "lt.h"
+#ifdef _WIN32
 #include "iocp.h"
+#endif
 #include "connect.h"
 #include "heart.h"
 #include "worker.h"
@@ -20,12 +22,12 @@ int initlog()
 	sprintf(path, "%s/zlog.conf", getcwd(buf, sizeof(buf)));
 	rc = zlog_init(path);
 	if (rc) {
-		printf("ÈÕÖ¾Ä£¿é³õÊ¼»¯Ê§°Ü.\n");
+		printf("æ—¥å¿—æ¨¡å—åˆå§‹åŒ–å¤±è´¥.\n");
 		return -1;
 	}
 	z_cate = zlog_get_category("tserver");
 	if (!z_cate) {
-		printf("»ñÈ¡ÈÕÖ¾·ÖÀàÊ§°Ü.\n");
+		printf("è·å–æ—¥å¿—åˆ†ç±»å¤±è´¥.\n");
 		zlog_fini();
 		return -1;
 	}
@@ -37,12 +39,12 @@ int init_server()
 {
 	 apr_pool_initialize();
 	 if(apr_pool_create(&server_rec, NULL) != APR_SUCCESS){
-		 zlog_error(z_cate, "ÄÚ´æ³Ø³õÊ¼»¯Ê§°Ü!");
+		 zlog_error(z_cate, "å†…å­˜æ± åˆå§‹åŒ–å¤±è´¥!");
 		 return 0;
 	 }
 
 	 if(pthread_mutex_init(&conn_list_mutex, NULL) != 0){
-		 zlog_error(z_cate, "»¥³âËø´´½¨Ê§°Ü!");
+		 zlog_error(z_cate, "äº’æ–¥é”åˆ›å»ºå¤±è´¥!");
 		 return 0;
 	 }
 #ifdef _WIN32
@@ -57,7 +59,7 @@ int init_server()
 
 	 init_work_thread();
 	 parser_bson_init();
-
+	 init_db_exec_list();
 	 DBinit();
 	 return 1;
 }
@@ -81,7 +83,7 @@ int main(){
 		return 0;
 	
 	if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1){
-		zlog_error(z_cate, "¼àÌıÌ×½Ó×Ö´´½¨Ê§°Ü!");
+		zlog_error(z_cate, "ç›‘å¬å¥—æ¥å­—åˆ›å»ºå¤±è´¥!");
 		return 0;
 	}
 
@@ -95,7 +97,7 @@ int main(){
 	serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	if (bind(listenfd,(struct sockaddr *)&serveraddr, sizeof(serveraddr))  == -1){
-		zlog_error(z_cate, "¶Ë¿Ú°ó¶¨Ê§°Ü! ´íÎóÂë: %d", errno);
+		zlog_error(z_cate, "ç«¯å£ç»‘å®šå¤±è´¥! é”™è¯¯ç : %d", errno);
 		return -1;
 	}
 
@@ -108,48 +110,53 @@ int main(){
 	epoll_add_event(epfd, wakeupfd, tmp);
 #endif
 
-	//¿ªÊ¼¼àÌı
 	if (listen(listenfd, LISTENQ) == -1){
-		zlog_error(z_cate, "¼àÌıÊ§°Ü! ´íÎóÂë: %d", errno);
+		zlog_error(z_cate, "ç›‘å¬å¤±è´¥! é”™è¯¯ç : %d", errno);
 		return -1;
 	}
 	ret = pthread_create(&tid, NULL, heart_check, NULL);
 	if(ret != 0){
-		zlog_error(z_cate, "´´½¨ĞÄÌøÏß³ÌÊ§°Ü! ´íÎóÂë: %d", ret);
+		zlog_error(z_cate, "åˆ›å»ºå¿ƒè·³çº¿ç¨‹å¤±è´¥! é”™è¯¯ç : %d", ret);
 	    return -1;
 	}
 #ifdef _WIN32
 	ret = pthread_create(&tid, NULL, listen_thread, NULL);
 	if(ret != 0){
-		zlog_error(z_cate, "´´½¨ioÏß³ÌÊ§°Ü! ´íÎóÂë: %d", ret);
+		zlog_error(z_cate, "åˆ›å»ºç›‘å¬çº¿ç¨‹å¤±è´¥! é”™è¯¯ç : %d", ret);
 		return -1;
 	}
 	ret = pthread_create(&tid, NULL, service_thread, NULL);
 	if(ret != 0){
-		zlog_error(z_cate, "´´½¨ioÏß³ÌÊ§°Ü! ´íÎóÂë: %d", ret);
+		zlog_error(z_cate, "åˆ›å»ºserviceçº¿ç¨‹å¤±è´¥! é”™è¯¯ç : %d", ret);
 		return -1;
 	}
 #elif __linux__
 	ret = pthread_create(&tid, NULL, epoll_loop, NULL);
 	if(ret != 0){
-	    zlog_error(z_cate, "´´½¨ioÏß³ÌÊ§°Ü! ´íÎóÂë: %d", ret);
+	    zlog_error(z_cate, "åˆ›å»ºioçº¿ç¨‹å¤±è´¥! é”™è¯¯ç : %d", ret);
 	    return -1;
 	}
 #endif
 	for(i = 0; i< WORK_THREAD_COUNT; i++){
 	    ret = pthread_create(&tid, NULL, work_thread, NULL);
 	    if(ret != 0){
-		    zlog_error(z_cate, "´´½¨workÏß³ÌÊ§°Ü! ´íÎóÂë: %d", ret);
+		    zlog_error(z_cate, "åˆ›å»ºworkçº¿ç¨‹å¤±è´¥! é”™è¯¯ç : %d", ret);
 		    return -1;
 	    }
 	}
 
 	ret = pthread_create(&tid, NULL, db_read_thread, NULL);
 	if(ret != 0){
-	    zlog_error(z_cate, "´´½¨Ö¸Áî¶ÁÈ¡Ïß³ÌÊ§°Ü! ´íÎóÂë: %d", ret);
+	    zlog_error(z_cate, "åˆ›å»ºæŒ‡ä»¤è¯»å–çº¿ç¨‹å¤±è´¥! é”™è¯¯ç : %d", ret);
 	    return -1;
 	}
 
+	ret = pthread_create(&tid, NULL, db_write_thread, NULL);
+	if(ret != 0){
+	    zlog_error(z_cate, "åˆ›å»ºæ•°æ®åº“çº¿ç¨‹å¤±è´¥! é”™è¯¯ç : %d", ret);
+	    return -1;
+	}
+	
 	//accept_command();
 	for(;;){
 		t_sleep_loop(2);
@@ -176,17 +183,17 @@ void accept_command()
 			c_fd = socket(AF_INET, SOCK_STREAM,0);
 			if (-1 == c_fd)
 			{
-				zlog_error(z_cate, "´´½¨¿Í»§¶ËÌ×½Ó×ÖÊ§°Ü!");
+				zlog_error(z_cate, "???Â¨???Â§???Ã—??Ã—??Â§Â°?!");
 				return;
 			}
 		}
 		ret = connect(c_fd, (struct sockaddr*)&c_addr,sizeof(c_addr));
 		if (ret < 0){
-			//zlog_error(z_cate, "Á¬½Óµ½ÉÏÓÎ·şÎñÆ÷Ê§°Ü.");
+			//zlog_error(z_cate, "???????????????Ã·?Â§Â°?.");
 			sleep(5);
 			continue;
 		}
-		zlog_info(z_cate, "Á¬½Óµ½ÉÏÓÎ·şÎñÆ÷³É¹¦.");
+		zlog_info(z_cate, "???????????????Ã·????.");
 		setnonblocking(c_fd);
 		s_con = create_conn(c_fd, ROOT_SERVER_IP, ROOT_SERVER_PORT);
 		s_con->read_callback = NULL;
@@ -198,20 +205,20 @@ void accept_command()
 			for (i = 0; i < n; i++) {
 				conn_rec *c = (conn_rec *)events[i].data.ptr;
 				if(events[i].events & EPOLLIN){
-					zlog_debug(z_cate, "ÃüÁî¼àÌıÏß³Ì´¥·¢¶ÁÊÂ¼ş.");
+					zlog_debug(z_cate, "?Ã¼???Ã ????????????????.");
 					handle_read(c);
 				}
 				else if(events[i].events & EPOLLOUT){
-					zlog_debug(z_cate, "ÃüÁî¼àÌıÏß³Ì´¥·¢Ğ´ÊÂ¼ş.");
+					zlog_debug(z_cate, "?Ã¼???Ã ????????????????.");
 					handle_write(c);
 				}
 			}
 			if(s_con && atomic_read(&s_con->aborted) != 0){
-				zlog_debug(z_cate, "ÃüÁî¼àÌıÏß³ÌÁ¬½ÓÒÑ¶Ï¿ª.");
+				zlog_debug(z_cate, "?Ã¼???Ã ????????????????.");
 				break;
 			}else{
 				if(s_con->send_queue->size > 0){
-					zlog_debug(z_cate, "ÃüÁî¼àÌıÏß³Ì¿ªÊ¼·¢ËÍÊı¾İ.");
+					zlog_debug(z_cate, "?Ã¼???Ã ??????????????????.");
 					ret = packet_send(s_con);
 					if(ret == SEND_AGAIN){
 						epoll_mod_event(c_poll, s_con->fd, s_con, EPOLLOUT);

@@ -1,4 +1,4 @@
-#ifndef HANDLER_COMMAND_H
+﻿#ifndef HANDLER_COMMAND_H
 #define HANDLER_COMMAND_H
 #include"command.h"
 #include"connect.h"

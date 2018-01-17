@@ -1,4 +1,4 @@
-#ifndef _DB_PROCESS_H
+ï»¿#ifndef _DB_PROCESS_H
 #define _DB_PROCESS_H
 
 #include "tdb.h"
@@ -9,10 +9,10 @@
 
 typedef struct db_exec_rec_t{
 	apr_pool_t *pool;
-	char *op_id;			/*ÃüÁîid*/
-	char *op_result;    	/*ÃüÁîÖ´ĞĞ½á¹û*/
-	int op_tye;			/*ÃüÁîÀàĞÍ ÈçÏµÍ³ÃüÁî ÎÄ¼ş²Ù×÷µÈ*/
-	int op_status;			/*ÃüÁîÖ´ĞĞµÄ×´Ì¬ 0 ³É¹¦ 1 Ê§°Ü 2Î´Íê³É*/
+	char *op_id;			/*å‘½ä»¤id*/
+	char *op_result;    	/*å‘½ä»¤æ‰§è¡Œç»“æœ*/
+	int op_tye;			/*å‘½ä»¤ç±»å‹ å¦‚ç³»ç»Ÿå‘½ä»¤ æ–‡ä»¶æ“ä½œç­‰*/
+	int op_status;			/*å‘½ä»¤æ‰§è¡Œçš„çŠ¶æ€ 0 æˆåŠŸ 1 å¤±è´¥ 2æœªå®Œæˆ*/
 	struct db_exec_rec_t *next;
 }db_exec_rec;
 
@@ -26,6 +26,7 @@ typedef struct db_exec_list_t
 
 void *db_read_thread(void *p);
 int fetch_command(DB_CON 	con);
+void *db_write_thread(void *p);
 void add_db_exec_rec(db_exec_rec *r);
 int init_db_exec_list();
 

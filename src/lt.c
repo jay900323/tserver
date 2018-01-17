@@ -1,4 +1,4 @@
-#ifdef __linux__
+ï»¿#ifdef __linux__
 #include <sys/eventfd.h>
 #include "config.h"
 #include "lt.h"
@@ -39,7 +39,7 @@ int create_eventfd()
 int epoll_add_event(int ep, int fd, void* conn){
 	addref((conn_rec *)conn);
 	struct epoll_event ee;
-	ee.events = EPOLLIN|EPOLLRDHUP|EPOLLERR;
+	ee.events = EPOLLIN;
 	ee.data.ptr = conn;
 	if(epoll_ctl(ep, EPOLL_CTL_ADD, fd, &ee) == -1){
 		return -1;
@@ -75,7 +75,7 @@ void* epoll_loop(void *param)
 	int ret;
 	struct epoll_event events[MAX_EPOLL_EVENT_COUNT];
 
-	zlog_info(z_cate, "IOÏß³ÌÒÑÆô¶¯ tid=%lu!", pthread_self());
+	zlog_info(z_cate, "IOçº¿ç¨‹å·²å¯åŠ¨ tid=%lu!", pthread_self());
 	while(!server_stop)
 	{
 		nfds = epoll_wait(epfd, events, MAX_EPOLL_EVENT_COUNT, -1);
@@ -91,32 +91,32 @@ void* epoll_loop(void *param)
 				}
 			}
 			else if(sockfd == wakeupfd && events[i].events & EPOLLIN){
-				zlog_debug(z_cate, "´¥·¢»½ĞÑÊÂ¼ş");
+				zlog_debug(z_cate, "è§¦å‘å”¤é†’äº‹ä»¶");
 				handle_wake_read();
 			}
 			else if(events[i].events & EPOLLIN)
 		    {
-				//ÊÕµ½Í·²¿4¸ö×Ö½Ú»òÍêÕûµÄÊı¾İ°ü
-				zlog_debug(z_cate, "´¥·¢¶ÁÊÂ¼ş");
+				//æ”¶åˆ°å¤´éƒ¨4ä¸ªå­—èŠ‚æˆ–å®Œæ•´çš„æ•°æ®åŒ…
+				zlog_debug(z_cate, "è§¦å‘è¯»äº‹ä»¶");
 				heart_handler(c);
 				handle_read(c);
 		    }
 			else if(events[i].events & EPOLLOUT)
 			{
-				zlog_debug(z_cate, "´¥·¢Ğ´ÊÂ¼ş");
+				zlog_debug(z_cate, "è§¦å‘å†™äº‹ä»¶");
 				handle_write(c);
 		    }
 		    else if((events[i].events & EPOLLHUP) || (events[i].events & EPOLLERR))
 		    {
-		    	zlog_debug(z_cate, "´¥·¢EPOLLHUP EPOLLERR ÊÂ¼ş");
-		    	//·şÎñ¶Ë³ö´í´¥·¢
+		    	zlog_debug(z_cate, "è§¦å‘EPOLLHUP EPOLLERR äº‹ä»¶");
+		    	//æœåŠ¡ç«¯å‡ºé”™è§¦å‘
 		    	atomic_set(&c->aborted, 1);
 		    	close_connect(c);
 		    }
 		    else if(events[i].events & EPOLLRDHUP)
 		    {
-		    	zlog_debug(z_cate, "´¥·¢EPOLLRDHUP ÊÂ¼ş");
-		    	//¿Í»§¶Ë¹Ø±Õ´¥·¢EPOLLINºÍEPOLLRDHUP
+		    	zlog_debug(z_cate, "è§¦å‘EPOLLRDHUP äº‹ä»¶");
+		    	//å®¢æˆ·ç«¯å…³é—­è§¦å‘EPOLLINå’ŒEPOLLRDHUP
 		    	close_connect(c);
 		    }
 			xsend();
@@ -152,7 +152,7 @@ int handle_read(conn_rec *c)
 		}
 		else {
 			if( ret == RECV_FAILED){
-				zlog_debug(z_cate, "½ÓÊÕÊ§°Ü FAILED");
+				zlog_debug(z_cate, "æ¥æ”¶å¤±è´¥ FAILED");
 				close_connect(c);
 			}
 			return -1;
@@ -167,7 +167,7 @@ int handle_write(conn_rec *c)
 	if(ret == SEND_COMPLATE){
 		buffer_queue_detroy(c->send_queue);
 		c->send_queue = NULL;
-		epoll_mod_event(epfd, c->fd, c, EPOLLIN|EPOLLRDHUP|EPOLLERR);
+		epoll_mod_event(epfd, c->fd, c, EPOLLIN);
 	}
 	else if(ret == SEND_FAILED){
 		close_connect(c);
@@ -184,7 +184,7 @@ int handle_accept()
 
 	connfd = accept(listenfd, (struct sockaddr *)&clientaddr, &clilen);
 	if(connfd == -1){
-		zlog_error(z_cate, "Ì×½Ó×ÖacceptÊ§°Ü! ´íÎóÂë:%d", errno);
+		zlog_error(z_cate, "å¥—æ¥å­—acceptå¤±è´¥! é”™è¯¯ç :%d", errno);
 		return -1;
 	}
 
@@ -193,7 +193,7 @@ int handle_accept()
 	setsockopt(connfd, SOL_SOCKET,SO_RCVBUF,(const char*)&buf_size,sizeof(int));
 	setsockopt(connfd, SOL_SOCKET,SO_SNDBUF,(const char*)&buf_size,sizeof(int));
 
-	int timeout=10000;//1Ãë
+	int timeout=10000;//1ç§’
 	setsockopt(connfd, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout, sizeof(int));
 	setsockopt(connfd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(int));
 
@@ -216,7 +216,7 @@ int length_to_read(conn_rec *c)
 	}else{
 		int *len = (int *)c->recv_queue->p_head->buffer;
 
-		if(*len >= MAX_DATALEN){
+		if(*len >= 100000){
 			//data length is too large
 			zlog_error(z_cate, "data length is too large %d", *len);
 			atomic_set(&c->aborted, 1);
@@ -239,7 +239,7 @@ int xsend()
 		conn_rec *c = node->con;
 		if(c->send_queue){
 			if(c->send_queue->size > 0){
-				zlog_debug(z_cate, "·¢ËÍ»º³åÇøÎ´·¢ËÍÍê±Ï");
+				zlog_debug(z_cate, "å‘é€ç¼“å†²åŒºæœªå‘é€å®Œæ¯•");
 				buffer_queue_write_ex(c->send_queue, node->buf_queue);
 				node = remove_result(node);
 				continue;
@@ -248,11 +248,11 @@ int xsend()
 
 		buffer_queue_detroy(c->send_queue);
 		c->send_queue = node->buf_queue;
-		zlog_debug(z_cate, "·¢ËÍÊı¾İ len=%d", c->send_queue->size);
+		zlog_debug(z_cate, "å‘é€æ•°æ® len=%d", c->send_queue->size);
 		ret = packet_send(c);
 		if(ret == SEND_AGAIN){
 			zlog_debug(z_cate, "ret = SEND_AGAIN");
-			epoll_mod_event(epfd, c->fd, c, EPOLLOUT);
+			epoll_mod_event(epfd, c->fd, c, EPOLLIN|EPOLLOUT);
 		}
 		else if(ret == SEND_FAILED){
 			zlog_debug(z_cate, "ret = SEND_FAILED");
@@ -300,7 +300,7 @@ int packet_recv(conn_rec *c)
 		if(aborted == 1){
 			return RECV_FAILED;
 		}
-		//ÅĞ¶Ï±¾´Î½ÓÊÕÊÇ·ñÍê³É
+		//åˆ¤æ–­æœ¬æ¬¡æ¥æ”¶æ˜¯å¦å®Œæˆ
 		if(recvlen < readlen){
 			return RECV_AGAIN;
 		}
@@ -407,14 +407,18 @@ int close_connect(conn_rec *c)
 
 int s_connect(conn_rec *c)
 {
-	zlog_debug(z_cate, "¹Ø±ÕÌ×½Ó×Ö");
-	epoll_del_event(epfd, c->fd, c, EPOLLIN);
-	close(c->fd);
-	if(!deref(c)){
-		pthread_mutex_lock(&conn_list_mutex);
-		zlog_debug(z_cate, "ÒÆ³ıÁ¬½Ó");
-		remove_connect(c);
-		pthread_mutex_unlock(&conn_list_mutex);
+	if(c->fd){
+		zlog_debug(z_cate, "å…³é—­å¥—æ¥å­—");
+		epoll_del_event(epfd, c->fd, c, EPOLLIN);
+		close(c->fd);
+		c->fd = 0;
+		if(!deref(c)){
+			pthread_mutex_lock(&conn_list_mutex);
+			zlog_debug(z_cate, "ç§»é™¤è¿æ¥");
+			remove_connect(c);
+			pthread_mutex_unlock(&conn_list_mutex);
+		}
 	}
+
 }
 #endif

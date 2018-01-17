@@ -1,4 +1,4 @@
-#include <stdio.h>
+﻿#include <stdio.h>
 #include "handler_command.h"
 #include "db_process.h"
 #include "config.h"
@@ -21,7 +21,7 @@ struct command_rec_t* handler_command_cmd_ok(struct command_rec_t* req, context_
 	apr_pool_t *pool = NULL;
 	db_exec_rec *rec = NULL;
 	if(apr_pool_create(&pool, NULL) != APR_SUCCESS){
-		zlog_error(z_cate, "db_exec_rec创建失败!");
+		zlog_error(z_cate, "db_exec_rec???¨?§°?!");
 		return NULL;
 	}
 	rec = apr_palloc(pool, sizeof(db_exec_rec));
@@ -45,7 +45,11 @@ struct command_rec_t* handler_command(struct command_rec_t* req, context_rec *ct
 		rep = handler_command_connect(req, ctx);
 		break;
 	case COMMAND_TYPE_CMD_OK:
-		zlog_info(z_cate,"命令执行结果:%s", req->data.exc_cmd_ok.info);
+		handler_command_cmd_ok(req, ctx);
+		zlog_info(z_cate,"?ü???????á??:%s", req->data.exc_cmd_ok.info);
+		break;
+	case COMMAND_TYPE_FILEULD_OK:
+		zlog_info(z_cate,"文件上传结果:%s", req->data.file_upload_ok.info);
 		break;
 	default :
 		return NULL;

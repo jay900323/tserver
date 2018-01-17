@@ -1,26 +1,32 @@
-#ifndef _DB_H
+ï»¿#ifndef _DB_H
 #define _DB_H
 
 #include "config.h"
 
-#define T_DB_DOWN 2   //Êı¾İ¿âdown
-#define T_DB_FAIL 1   //Êı¾İ¿â´íÎó
+#define T_PARAMBIND_ERROR 3 //å‚æ•°ç»‘å®šé”™è¯¯
+#define T_DB_DOWN 2   //æ•°æ®åº“down
+#define T_DB_FAIL 1   //æ•°æ®åº“é”™è¯¯
 #define T_DB_OK 0
-//Êı¾İ¿âÁ¬½ÓÑ¡Ïî
-#define T_DB_CONNECT_ONCE   0   //½öÁ¬½ÓÒ»´Î
-#define T_DB_CONNECT_NORMAL 1   //Õı³£Á¬½Ó
-#define T_DB_CONNECT_EXIT   2   //Á¬½ÓºóÖ±½ÓÍË³ö
+//æ•°æ®åº“è¿æ¥é€‰é¡¹
+#define T_DB_CONNECT_ONCE   0   //ä»…è¿æ¥ä¸€æ¬¡
+#define T_DB_CONNECT_NORMAL 1   //æ­£å¸¸è¿æ¥
+#define T_DB_CONNECT_EXIT   2   //è¿æ¥åç›´æ¥é€€å‡º
 
-#define T_DB_WAIT_DOWN  3    //ÖØÁ¬µÈ´ıÊ±¼ä(Ãë)
+#define T_DB_WAIT_DOWN  3    //é‡è¿ç­‰å¾…æ—¶é—´
 
 #define SUCCEED 0
 #define FAILED 1
 
-//´æ´¢fetchºóµÄµ¥ĞĞ¼ÇÂ¼
+#define PARAM_TYPE_INT   0
+#define PARAM_TYPE_STRING   1
+#define PARAM_TYPE_BLOB   2
+
+//å­˜å‚¨fetchåçš„å•è¡Œè®°å½•
 typedef char	**DB_ROW;
-//´æ´¢½á¹û¼¯
+//å­˜å‚¨ç»“æœé›†
 typedef struct db_result_t	*DB_RESULT;
 typedef struct db_conn_t	*DB_CON;
+typedef struct param_bind_t *DB_PARAMBIND;
 
 int	t_db_init(const char *dbname);
 void t_db_close(struct db_conn_t *con);
@@ -37,5 +43,10 @@ int	zbx_db_txn_error(void);
 struct db_conn_t *create_db_connect();
 void release_db_connect(struct db_conn_t *con);
 
+struct param_bind_t* t_param_bind_init(struct db_conn_t *con, const char *sql);
+int t_set_param_bind(struct param_bind_t *param_bind, int index, void *value, int length, int type);
+int t_param_bind_execute(struct param_bind_t *param_bind);
+int get_param_type(int type);
+void Parambind_free(struct param_bind_t *param_bind);
 #endif
 

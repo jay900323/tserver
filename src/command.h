@@ -1,18 +1,18 @@
-#ifndef _COMMAND_H
+ï»¿#ifndef _COMMAND_H
 #define _COMMAND_H
 
 #include "apr_pools.h"
 
-/* Êı¾İ¿âÖĞÏÂ·¢µÄÖ¸ÁîÀàĞÍ */
+/* æ•°æ®åº“ä¸­ä¸‹å‘çš„æŒ‡ä»¤ç±»å‹ */
 typedef enum {
 	cmdline = 0,
-	file_download,
 	file_upload,
+	file_download,
 	trigger
 }db_command_type;
 
 /*
-½«ÍøÂç½ÓÊÕµÄÊı¾İ£¬×ª»»Îª½á¹¹»¯µÄÊı¾İ
+å°†ç½‘ç»œæ¥æ”¶çš„æ•°æ®ï¼Œè½¬æ¢ä¸ºç»“æ„åŒ–çš„æ•°æ®
 */
 typedef enum {
 	COMMAND_TYPE_OK,
@@ -23,6 +23,9 @@ typedef enum {
 	COMMAND_TYPE_CMD,
 	COMMAND_TYPE_CMD_OK,
 	COMMAND_TYPE_CMD_ERROR,
+	COMMAND_TYPE_FILEULD,
+	COMMAND_TYPE_FILEULD_OK,
+	COMMAND_TYPE_FILEULD_ERROR,
 	COMMAND_TYPE_FILEDLD,
 	COMMAND_TYPE_FILEDLD_OK,
 	COMMAND_TYPE_FILEDLD_ERROR,
@@ -31,10 +34,10 @@ typedef enum {
 
 typedef struct command_rec_t {
 	apr_pool_t *pool;
-	command_type      type;   /*ÃüÁîÀàĞÍ*/
-	char*  uuid;	/*Ö¸Áîid*/
-	char*  src;		/*Ô´id*/
-	char*  dest;	/*Ä¿±êid*/
+	command_type      type;   /*å‘½ä»¤ç±»å‹*/
+	char*  uuid;	/*æŒ‡ä»¤id*/
+	char*  src;		/*æºid*/
+	char*  dest;	/*ç›®æ ‡id*/
 	union {
 		struct {
 			command_type      subtype;
@@ -62,6 +65,30 @@ typedef struct command_rec_t {
 		struct {
 			char *err_info;
 		}exc_cmd_error;
+
+		struct {
+			char *filename; /*ä¿å­˜çš„æ–‡ä»¶å*/
+			char *content;  /*æ–‡ä»¶å†…å®¹*/
+			int filesize;   /*æ–‡ä»¶é•¿åº¦*/
+		}file_upload;
+		struct {
+			char *info;
+		}file_upload_ok;
+		struct {
+			char *info;
+		}file_upload_error;
+
+		struct {
+			char *filepath; /*æ–‡ä»¶è·¯å¾„*/
+		}file_download;
+		struct {
+			char *filename; /*ä¿å­˜çš„æ–‡ä»¶å*/
+			char *content;  /*æ–‡ä»¶å†…å®¹*/
+			int filesize;   /*æ–‡ä»¶é•¿åº¦*/
+		}file_download_ok;
+		struct {
+			char *info;
+		}file_download_error;
 	}data;
 }command_rec;
 

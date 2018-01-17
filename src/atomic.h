@@ -1,4 +1,4 @@
-#ifndef _ATOMIC_H
+﻿#ifndef _ATOMIC_H
 #define _ATOMIC_H
 
 #include <pthread.h>

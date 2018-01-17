@@ -1,4 +1,4 @@
-#ifndef _HEART_H
+﻿#ifndef _HEART_H
 #define _HEART_H
 
 void heart_handler(conn_rec *c);

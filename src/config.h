@@ -1,4 +1,4 @@
-#ifndef _CONFIG_H
+ï»¿#ifndef _CONFIG_H
 #define _CONFIG_H
 
 #include <stdio.h>
@@ -24,24 +24,24 @@
 #ifdef _WIN32
 #include  "zlog.h"
 #elif __linux__
-#include "zlog.h"
+#include <zlog.h>
 #endif
 #include "atomic.h"
 
 struct conn_rec_t;
 struct conn_rec_list_t;
 
-#define SERV_PORT  5678 // ·şÎñÆ÷¶Ë¿Ú
-#define LISTENQ          128   // listen sock ²ÎÊı
-#define MAX_EPOLL_EVENT_COUNT      1024   // Í¬Ê±¼àÌıµÄ epoll Êı
-#define EPOLL_LOOP_THREAD_COUNT  1   //IOÏß³ÌÊıÄ¿
-#define WORK_THREAD_COUNT   2 //¹¤×÷Ïß³ÌÊıÄ¿
-#define MAX_DATALEN			10000 //Í·4¸ö×Ö½ÚÖĞÔÊĞíĞ´ÈëµÄ×î´ó³¤¶È
+#define SERV_PORT  5678 // æœåŠ¡å™¨ç«¯å£
+#define LISTENQ          128   // listen sock å‚æ•°
+#define MAX_EPOLL_EVENT_COUNT      1024   // åŒæ—¶ç›‘å¬çš„ epoll æ•°
+#define EPOLL_LOOP_THREAD_COUNT  1   //IOçº¿ç¨‹æ•°ç›®
+#define WORK_THREAD_COUNT   2 //å·¥ä½œçº¿ç¨‹æ•°ç›®
+#define MAX_DATALEN			10000 //å¤´4ä¸ªå­—èŠ‚ä¸­å…è®¸å†™å…¥çš„æœ€å¤§é•¿åº¦
 #define DATA_BUFSIZE 4096
 #define ROOT_SERVER_IP "127.0.0.1"
 #define ROOT_SERVER_PORT 6789
-#define MSGHEADER_LENGTH sizeof(int)   //Í·²¿µÄ³¤¶ÈËùÕ¼×Ö½ÚÊı
-#define COMMANDTHREAD_TIMEOUT 5			//Ö¸Áî¼à¿ØÏß³ÌµÄÂÖÑµ¼ä¸ôÊ±¼ä
+#define MSGHEADER_LENGTH sizeof(int)   //å¤´éƒ¨çš„é•¿åº¦æ‰€å å­—èŠ‚æ•°
+#define COMMANDTHREAD_TIMEOUT 5			//æŒ‡ä»¤ç›‘æ§çº¿ç¨‹çš„è½®è®­é—´éš”æ—¶é—´
 #define SEND_FAILED 0
 #define SEND_AGAIN 1
 #define SEND_COMPLATE 2
@@ -52,7 +52,7 @@ struct conn_rec_list_t;
 
 #ifdef _WIN32
 extern FILE * z_cate;
-#elif __llinux__
+#elif __linux__
 extern zlog_category_t *z_cate;
 #endif
 

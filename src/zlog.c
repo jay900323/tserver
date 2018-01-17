@@ -1,10 +1,10 @@
-#include "zlog.h"
+ï»¿#include "zlog.h"
 
 #ifdef _WIN32
 #include <stdarg.h>
 #include <Windows.h>
 
-const char *get_log_level(int log_level)
+int get_log_level(int log_level)
 {
 	switch (log_level)
 	{
@@ -29,12 +29,12 @@ void zlog(FILE *fp, const char *file, long line, int level,const char *format, .
 {
 	time_t t = time(0);   
 	char tmp[64];   
-	char buf[1024] = {0};
-	char buf2[1024] = {0};
+	char buf[4096] = {0};
+	char buf2[4096] = {0};
 	va_list ap;
 
 	strftime( tmp, sizeof(tmp), "%Y/%m/%d %H:%M:%S",localtime(&t) );
-	/* Ê±¼äÈÕÆÚ µÈ¼¶ (ÎÄ¼şÃû:ĞĞºÅ)*/
+	/* æ—¶é—´æ—¥æœŸ ç­‰çº§ (æ–‡ä»¶å:è¡Œå·)*/
 	va_start(ap, format);
 	vsnprintf (buf, 1024, format, ap);
 	va_end(ap);

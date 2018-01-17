@@ -1,4 +1,4 @@
-#include "atomic.h"
+﻿#include "atomic.h"
 
 void atomic_init(atomic *v)
 {

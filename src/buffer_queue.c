@@ -1,4 +1,4 @@
-#include <string.h>
+ï»¿#include <string.h>
 #include "buffer_queue.h"
 
 struct buffer_queue_t * buffer_queue_init(apr_pool_t *con_pool)
@@ -6,7 +6,7 @@ struct buffer_queue_t * buffer_queue_init(apr_pool_t *con_pool)
 	struct buffer_queue_t *queue  = NULL;
 	apr_pool_t *pool = NULL;
 	if(apr_pool_create(&pool, con_pool) != APR_SUCCESS){
-		zlog_info(z_cate, "»º´æ¶ÓÁĞ³õÊ¼»¯Ê§°Ü!");
+		zlog_info(z_cate, "ç¼“å­˜é˜Ÿåˆ—åˆå§‹åŒ–å¤±è´¥!");
 	  return NULL;
 	}
 	queue = (struct buffer_queue_t *)apr_pcalloc(pool, sizeof(struct buffer_queue_t));

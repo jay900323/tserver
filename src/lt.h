@@ -1,4 +1,4 @@
-#ifndef _LT_H_
+﻿#ifndef _LT_H_
 #define _LT_H_
 
 #ifdef __linux__

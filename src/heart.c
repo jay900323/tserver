@@ -1,4 +1,4 @@
-#include "connect.h"
+ï»¿#include "connect.h"
 #include "heart.h"
 #include "config.h"
 
@@ -9,7 +9,7 @@ void heart_handler(conn_rec *c)
 
  void *heart_check(void *p)
 {
-	 zlog_info(z_cate, "ĞÄÌø¼ì²âÏß³ÌÒÑÆô¶¯!");
+	 zlog_info(z_cate, "å¿ƒè·³æ£€æµ‹çº¿ç¨‹å·²å¯åŠ¨!");
 
     while(!server_stop){
         check_handler();
@@ -25,8 +25,8 @@ void check_handler()
     c = conn_list.conn_head;
     while(NULL != c  && !server_stop){
         if(atomic_read(&c->heart_count) >= 5){
-        	zlog_info(z_cate, "¿Í»§¶ËIP:  %s ÒÑ¾­µôÏß!", c->remote_ip);
-        	zlog_debug(z_cate, "¹Ø±ÕÌ×½Ó×Ö");
+        	zlog_info(z_cate, "å®¢æˆ·ç«¯IP:  %s å·²ç»æ‰çº¿!", c->remote_ip);
+        	zlog_debug(z_cate, "å…³é—­å¥—æ¥å­—");
 #ifdef _WIN32
 			CancelIo((HANDLE)(c->fd));
 			closesocket(c->fd);

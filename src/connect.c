@@ -1,4 +1,4 @@
-#include <stdlib.h>
+﻿#include <stdlib.h>
 #include <string.h>
 #include "connect.h"
 
@@ -24,7 +24,10 @@ conn_rec *create_conn(int fd, const char *remote_ip, int remote_port)
 	atomic_init(&c->heart_count);
 	atomic_init(&c->aborted);
 	pthread_mutex_init(&c->ref_mutex, NULL);
-
+#ifdef _WIN32
+	c->recv_per_io_data.operation_type = OP_READ;
+	c->send_per_io_data.operation_type = OP_WRITE;
+#endif
 	context = (context_rec *)apr_pcalloc(trans, sizeof(context_rec));
 	context->pool = trans;
 	context->type = 0;
@@ -82,6 +85,7 @@ int deref(conn_rec *c)
 {
 	pthread_mutex_lock(&c->ref_mutex);
 	c->ref--;
+	zlog_debug(z_cate, "当前引用计数%d", c->ref);
 	if(c->ref <=0){
 		release_connect(c);
 		return 1;

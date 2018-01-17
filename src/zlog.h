@@ -1,4 +1,4 @@
-#ifndef _ZLOG_H
+﻿#ifndef _ZLOG_H
 #define _ZLOG_H
 
 #ifdef _WIN32
@@ -11,7 +11,7 @@
 #define ZLOG_LEVEL_ERROR 4
 #define ZLOG_LEVEL_FATAL 5
 
-const char *get_log_level(int log_level);
+int get_log_level(int log_level);
 void zlog(FILE *fp, const char *file, long line, int level,const char *format, ...);
 
 

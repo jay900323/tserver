@@ -1,4 +1,4 @@
-#ifndef _BUFFER_QUEUE_H_
+ï»¿#ifndef _BUFFER_QUEUE_H_
 #define _BUFFER_QUEUE_H_
 
 #include "config.h"
@@ -7,7 +7,7 @@ struct buffer_packet_t
 {
     char buffer[DATA_BUFSIZE];
     int remain_size;
-    //ÒÑ·¢ËÍ³¤¶È ÓÃÓÚ·¢ËÍ»º³åÇø
+    //å·²å‘é€é•¿åº¦ ç”¨äºå‘é€ç¼“å†²åŒº
     int send_size;
     struct buffer_packet_t  *next;
 };
@@ -16,23 +16,23 @@ struct buffer_queue_t
 {
 	apr_pool_t *pool;
     struct buffer_packet_t   *p_head,*p_last;
-    /*»º³å¶ÓÁĞ×î´ó³¤¶È(×Ö½ÚÊı)*/
+    /*ç¼“å†²é˜Ÿåˆ—æœ€å¤§é•¿åº¦(å­—èŠ‚æ•°)*/
     unsigned short   max_size;
-    /*»º³å¶ÓÁĞ³¤¶È(×Ö½ÚÊı)*/
+    /*ç¼“å†²é˜Ÿåˆ—é•¿åº¦(å­—èŠ‚æ•°)*/
     unsigned short   size;
 };
 
 struct buffer_queue_t * buffer_queue_init(apr_pool_t *con_pool);
 void buffer_queue_detroy(struct buffer_queue_t *p_queue);
-/*º¯Êı¹¦ÄÜ£ºÍù»º³å¶ÓÁĞÖĞ×·¼ÓÊı¾İ*/
+/*å‡½æ•°åŠŸèƒ½ï¼šå¾€ç¼“å†²é˜Ÿåˆ—ä¸­è¿½åŠ æ•°æ®*/
 int buffer_queue_write(struct buffer_queue_t *p_queue,unsigned char *p_dest,int rd_len);
 int buffer_queue_write_ex(struct buffer_queue_t *dest_queue,struct buffer_queue_t *src_dest);
-/*º¯Êı¹¦ÄÜ£º´Ó»º³å¶ÓÁĞÖĞ¶ÁÈ¡ËùÓĞµÄÊı¾İ*/
+/*å‡½æ•°åŠŸèƒ½ï¼šä»ç¼“å†²é˜Ÿåˆ—ä¸­è¯»å–æ‰€æœ‰çš„æ•°æ®*/
 int buffer_queue_read(struct buffer_queue_t *rb,unsigned char *pdest, int rd_len);
-/*º¯Êı¹¦ÄÜ£º´Ó¶ÓÁĞÈ¡³ö×îºóÒ»¸öÓĞ¿ÕÓàÊı¾İÇøµÄ¿é£¬Èç¹û²»´æÔÚÔò´´½¨Ò»¸ö*/
+/*å‡½æ•°åŠŸèƒ½ï¼šä»é˜Ÿåˆ—å–å‡ºæœ€åä¸€ä¸ªæœ‰ç©ºä½™æ•°æ®åŒºçš„å—ï¼Œå¦‚æœä¸å­˜åœ¨åˆ™åˆ›å»ºä¸€ä¸ª*/
 struct buffer_packet_t *buffer_queue_last(struct buffer_queue_t *queue);
-/*º¯Êı¹¦ÄÜ£ºÉ¾³ı¶ÓÁĞÖĞµÄµÚÒ»¸ö¿é*/
+/*å‡½æ•°åŠŸèƒ½ï¼šåˆ é™¤é˜Ÿåˆ—ä¸­çš„ç¬¬ä¸€ä¸ªå—*/
 struct buffer_packet_t *buffer_queue_pop(struct buffer_queue_t *queue);
-/*º¯Êı¹¦ÄÜ£ºÈ¡³ö¶ÓÁĞÖĞµÄµÚÒ»¸öÔªËØ*/
+/*å‡½æ•°åŠŸèƒ½ï¼šå–å‡ºé˜Ÿåˆ—ä¸­çš„ç¬¬ä¸€ä¸ªå…ƒç´ */
 struct buffer_packet_t *buffer_queue_head(struct buffer_queue_t *queue);
 #endif //_BUFFER_QUEUE_H_

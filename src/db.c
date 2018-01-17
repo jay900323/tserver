@@ -1,4 +1,4 @@
-#include "db.h"
+ï»¿#include "db.h"
 #include "config.h"
 #include <assert.h>
 
@@ -59,7 +59,15 @@ struct db_conn_t{
 #endif
 };
 
-//ÊÂÎñÌá½»µÈ¼¶
+struct param_bind_t{
+	apr_pool_t *pool;
+#if defined(HAVE_MYSQL)
+	MYSQL_STMT* stmt;
+	MYSQL_BIND *bind;
+	unsigned long param_count;
+#endif
+};
+//äº‹åŠ¡æäº¤ç­‰çº§
 static int	txn_level = 0;
 //
 static int	txn_error = 0;
@@ -156,7 +164,7 @@ int	t_db_connect(struct db_conn_t *con, char *host, char *user, char *password, 
 
 	if (NULL == mysql_real_connect(con->conn, host, user, password, dbname, port, dbsocket, CLIENT_MULTI_STATEMENTS))
 	{
-		zlog_error(z_cate,"Á¬½ÓmysqlÊ§°Ü. Êý¾Ý¿âÃû: %s ´íÎóÃèÊö:%s", dbname, mysql_error(con->conn));
+		zlog_error(z_cate,"????mysql?Â§Â°?. ????????: %s ?Ã­?Ã³?Ã¨??:%s", dbname, mysql_error(con->conn));
 		ret = T_DB_FAIL;
 	}
 
@@ -175,7 +183,7 @@ int	t_db_connect(struct db_conn_t *con, char *host, char *user, char *password, 
 
 	if (T_DB_OK == ret && 0 != mysql_select_db(con->conn, dbname))
 	{
-		zlog_error(z_cate,"Á¬½ÓmysqlÊ§°Ü. Êý¾Ý¿âÃû: %s ´íÎóÃèÊö:%s", dbname, mysql_error(con->conn));
+		zlog_error(z_cate,"????mysql?Â§Â°?. ????????: %s ?Ã­?Ã³?Ã¨??:%s", dbname, mysql_error(con->conn));
 		ret = T_DB_FAIL;
 	}
 
@@ -236,7 +244,7 @@ int	t_db_commit(struct db_conn_t *con)
 		assert(0);
 	}
 
-	//²Ù×÷³ö´í ½øÐÐÊÂÎñ»Ø¹ö
+	//??Ã—Ã·???Ã­ ????????????
 	if (1 == txn_error)
 	{
 		zlog_debug(z_cate, "commit called on failed transaction, doing a rollback instead");
@@ -292,7 +300,7 @@ DB_RESULT	t_db_vselect(struct db_conn_t *con, const char *fmt, va_list args)
 	{
 		if (0 != mysql_query(con->conn, sql))
 		{
-			zlog_error(z_cate, "Êý¾Ý¿â²éÑ¯´íÎó.´íÎóÃèÊö:%s. sqlÓï¾ä:%s", mysql_error(con->conn), sql);
+			zlog_error(z_cate, "???????Ã©???Ã­?Ã³.?Ã­?Ã³?Ã¨??:%s. sql????:%s", mysql_error(con->conn), sql);
 			DBfree_result(result);
 			result = (SUCCEED == is_recoverable_mysql_error(con) ? (DB_RESULT)T_DB_DOWN : NULL);
 		}
@@ -335,7 +343,7 @@ int	t_db_vexecute(struct db_conn_t *con, const char *fmt, va_list args)
 #endif
 
 	if(apr_pool_create(&tmp, db_pools) != APR_SUCCESS){
-		return T_DB_FAIL;
+		return NULL;
 	}
 	sql = apr_pvsprintf(tmp, fmt, args);
 
@@ -360,7 +368,7 @@ int	t_db_vexecute(struct db_conn_t *con, const char *fmt, va_list args)
 	{
 		if (0 != (status = mysql_query(con->conn, sql)))
 		{
-			zlog_debug(z_cate, "Ö´ÐÐÊý¾Ý²Ù×÷´íÎó ´íÎóÃèÊö:%s, sqlÓï¾ä:%s", mysql_error(con->conn), sql);
+			zlog_debug(z_cate, "??????????Ã—Ã·?Ã­?Ã³ ?Ã­?Ã³?Ã¨??:%s, sql????:%s", mysql_error(con->conn), sql);
 			ret = (SUCCEED == is_recoverable_mysql_error(con) ? T_DB_DOWN : T_DB_FAIL);
 		}
 		else
@@ -378,7 +386,7 @@ int	t_db_vexecute(struct db_conn_t *con, const char *fmt, va_list args)
 				/* more results? 0 = yes (keep looping), -1 = no, >0 = error */
 				if (0 < (status = mysql_next_result(con->conn)))
 				{
-					zlog_error(z_cate, "»ñÈ¡¼ÇÂ¼¼¯³ö´í.´íÎóÃèÊö%s sqlÓï¾ä:%s", mysql_error(con->conn), sql);
+					zlog_error(z_cate, "?????????????Ã­.?Ã­?Ã³?Ã¨??%s sql????:%s", mysql_error(con->conn), sql);
 					ret = (SUCCEED == is_recoverable_mysql_error(con) ? T_DB_DOWN : T_DB_FAIL);
 				}
 			}
@@ -449,4 +457,117 @@ int	zbx_db_txn_error(void)
 
 
 
+struct param_bind_t* t_param_bind_init(struct db_conn_t *con, const char *sql)
+{
+	apr_pool_t *pool;
+	int	rc = T_DB_OK;
+	struct param_bind_t *param_bind = NULL;
+
+#if defined(HAVE_MYSQL)
+	MYSQL_STMT *stmt;
+	MYSQL_BIND *bind = NULL;
+	unsigned long param_count = 0;
+
+	if(apr_pool_create(&pool, db_pools) != APR_SUCCESS){
+		return NULL;
+	}
+	param_bind = (struct param_bind_t *)apr_pcalloc(pool, sizeof(struct param_bind_t));
+	param_bind->pool = pool;
+
+	stmt = mysql_stmt_init(con->conn);
+	if (!stmt)
+	{
+		return NULL;
+	}
+	if (mysql_stmt_prepare(stmt, sql, strlen(sql)))
+	{
+		return NULL;
+	}
+	param_count = mysql_stmt_param_count(stmt);
+	if (param_count > 0)
+	{
+		bind = (MYSQL_BIND *)apr_pcalloc(pool, param_count*sizeof(MYSQL_BIND));
+		if (!bind)
+		{
+			return NULL;
+		}
+		memset(bind, 0, param_count*sizeof(MYSQL_BIND));
+	}
+	param_bind->stmt = stmt;
+	param_bind->bind = bind;
+	param_bind->param_count = param_count;
+	return param_bind;
+#endif
+	return param_bind;
+}
+
+int t_set_param_bind(struct param_bind_t *param_bind, int index, void *value, int length, int type)
+{
+	int ret = 0;
+#if defined(HAVE_MYSQL)
+	if(index >= param_bind->param_count){
+		zlog_error(z_cate, "ç´¢å¼•è¶…è¿‡æ€»æ•°.");
+		return -1;
+	}
+	param_bind->bind[index].buffer = value;
+	param_bind->bind[index].buffer_type = get_param_type(type);
+	param_bind->bind[index].buffer_length = length;
+	return ret;
+#endif
+}
+
+t_param_bind_execute(struct param_bind_t *param_bind)
+{
+	int ret = 0;
+
+	if(!param_bind)
+		return 0;
+
+#if defined(HAVE_MYSQL)
+    if (mysql_stmt_bind_param(param_bind->stmt, param_bind->bind))
+    {
+    	zlog_error(z_cate, "å‚æ•°ç»‘å®šé”™è¯¯. é”™è¯¯ç : %d", mysql_stmt_errno(param_bind->stmt));
+        return -1;
+    }
+    if (mysql_stmt_execute(param_bind->stmt))
+    {
+    	zlog_error(z_cate, "å‚æ•°æäº¤é”™è¯¯. é”™è¯¯ç : %d", mysql_stmt_errno(param_bind->stmt));
+        return -1;
+    }
+    if (0 == mysql_stmt_affected_rows(param_bind->stmt))
+    {
+    	zlog_debug(z_cate, "æœ¬æ¬¡å‚æ•°ç»‘å®šæäº¤æ²¡æœ‰å˜åŒ–.");
+        return -1;
+    }
+    return 0;
+#endif
+    return ret;
+}
+
+void Parambind_free(struct param_bind_t *param_bind)
+{
+#if defined(HAVE_MYSQL)
+	mysql_stmt_close(param_bind->stmt);
+	apr_pool_destroy(param_bind->pool);
+#endif
+}
+
+int get_param_type(int type)
+{
+	switch(type){
+	case PARAM_TYPE_INT:
+#if defined(HAVE_MYSQL)
+		return MYSQL_TYPE_LONG;
+#endif
+	case PARAM_TYPE_STRING:
+#if defined(HAVE_MYSQL)
+		return MYSQL_TYPE_STRING;
+#endif
+	case PARAM_TYPE_BLOB:
+#if defined(HAVE_MYSQL)
+		return MYSQL_TYPE_BLOB;
+#endif
+	}
+	return 0;
+}
 

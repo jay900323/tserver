@@ -1,4 +1,4 @@
-#ifdef _WIN32
+ï»¿#ifdef _WIN32
 #include "iocp.h"
 #include "worker.h"
 #include "atomic.h"
@@ -12,14 +12,14 @@ void* listen_thread(void *param)
 	const char *remote_ip = NULL;
 	int  remote_port = 0;
 
-	zlog_info(z_cate, "¼àÌýÏß³ÌÒÑÆô¶¯ tid=%lu!", pthread_self());
+	zlog_info(z_cate, "ç›‘å¬çº¿ç¨‹å·²å¯åŠ¨ tid=%lu!", pthread_self());
 	while(TRUE)
 	{
 		if(WaitForSingleObject(exit_event, 0)==WAIT_OBJECT_0)
 		{
-			PostQueuedCompletionStatus(complateport, 0, (DWORD)NULL, NULL); //Í¶µÝ½áÊøÍê³É°ü
-			Sleep(0); //ÈÃ³öCPUÈ¨£¬ÈÃÒµÎñÏß³ÌÓÐ»ú»áÍË³ö		
-			closesocket(listenfd);//¿ÉÒÔ²»Òª
+			PostQueuedCompletionStatus(complateport, 0, (DWORD)NULL, NULL); /* æŠ•é€’ç»“æŸå®ŒæˆåŒ… */
+			Sleep(0); /*è®©å‡ºCPUæƒï¼Œè®©ä¸šåŠ¡çº¿ç¨‹æœ‰æœºä¼šé€€å‡º	 */
+			closesocket(listenfd); /* å¯ä»¥ä¸è¦ */
 			Sleep(200); 
 			break;
 		}
@@ -56,16 +56,19 @@ void* service_thread(void *param)
 	LPOVERLAPPED ol = NULL;
 	int iRet;
 	struct buffer_packet_t *packet = NULL;
-	zlog_info(z_cate, "IOÏß³ÌÒÑÆô¶¯ tid=%lu!", pthread_self());
+	BOOL bOK = FALSE;
+	per_io_data *per_io = NULL;
+
+	zlog_info(z_cate, "IOçº¿ç¨‹å·²å¯åŠ¨ tid=%lu!", pthread_self());
 
 	for(;;) {
-		// ÔÚ¹ØÁªµ½´ËÍê³É¶Ë¿ÚµÄËùÓÐÌ×½Ú×ÖÉÏµÈ´ýI/OÍê³É
-		BOOL bOK = GetQueuedCompletionStatus(hCompletion, 
-			&dwTrans, (LPDWORD)&c, (LPOVERLAPPED *)&ol, 1000*10);  //WSA_INFINITE
+		c = NULL;
+		bOK = GetQueuedCompletionStatus(hCompletion, 
+			&dwTrans, (LPDWORD)&c, (LPOVERLAPPED *)&ol, 1000*10);
 		
-
-		if(bOK) {//bOK==true 
-			if(c==NULL && ol == NULL) {//ÊÕµ½ÍË³öÐÅºÅµÄÍê³É°ü
+		per_io = (per_io_data *)ol;
+		if(bOK) {
+			if(c==NULL && ol == NULL) {
 				Sleep(10);
 				break;
 			}
@@ -73,29 +76,30 @@ void* service_thread(void *param)
 				xsend();
 				continue;
 			}
-			else if(dwTrans == 0 &&	 // Ì×½Ú×Ö±»¶Ô·½¹Ø±Õ
-				(c->operation_type & OP_READ || 
-				c->operation_type & OP_WRITE))	{
+			else if(dwTrans == 0 && 
+				(per_io->operation_type == OP_READ || per_io->operation_type == OP_WRITE))	{
+				/* å¥—èŠ‚å­—è¢«å¯¹æ–¹å…³é—­ */
 				close_connect(c);
 				continue;
 			}		
 		}
 		else{
-			if(c==NULL || c == 1){
+			if((c==NULL || c == 1) || ol == NULL){
 				continue;
 			}
-			else { //pPack!=NULL, ÔÚ´ËÌ×½Ú×ÖÉÏÓÐ´íÎó·¢Éú
+			else { 
+				/* åœ¨æ­¤å¥—èŠ‚å­—ä¸Šæœ‰é”™è¯¯å‘ç”Ÿ */
 				close_connect(c);
 				continue;
 			}
 		}
-		if(c->operation_type & OP_READ){
+		if(per_io->operation_type == OP_READ){
+			heart_handler(c);
 			packet = buffer_queue_last(c->recv_queue);
 			packet->remain_size -= dwTrans;
 			c->recv_queue->size += dwTrans;
 			iRet = packet_recv(c);
 			if(iRet == RECV_COMPLATE){
-				zlog_debug(z_cate, "½ÓÊÕµ½Ò»¸öÍêÕûµÄÊý¾Ý°üc->recv_queue %d",c->recv_queue->size);
 				if(is_heart_beat(c) || c->read_callback == NULL){
 					buffer_queue_detroy(c->recv_queue);
 					c->recv_queue = buffer_queue_init(c->pool);
@@ -109,19 +113,18 @@ void* service_thread(void *param)
 				close_connect(c);
 			}
 		}
-		else if(c->operation_type & OP_WRITE){
+		else if(per_io->operation_type == OP_WRITE){
 			if(dwTrans == 0){
 				close_connect(c);
 			}
 			else{
 				packet = buffer_queue_head(c->send_queue);
 				packet->send_size += dwTrans;
-				c->recv_queue->size -= dwTrans;
+				c->send_queue->size -= dwTrans;
 				iRet = packet_send(c);
 				if(iRet == SEND_COMPLATE){
 					buffer_queue_detroy(c->send_queue);
 					c->send_queue = NULL;
-					c->operation_type ^= OP_WRITE;
 				}else if(iRet == SEND_FAILED){
 					close_connect(c);
 				}
@@ -141,7 +144,7 @@ int xsend()
 		conn_rec *c = node->con;
 		if(c->send_queue){
 			if(c->send_queue->size > 0){
-				zlog_debug(z_cate, "·¢ËÍ»º³åÇøÎ´·¢ËÍÍê±Ï");
+				zlog_debug(z_cate, "å‘é€ç¼“å†²åŒºæœªå‘é€å®Œæ¯•");
 				buffer_queue_write_ex(c->send_queue, node->buf_queue);
 				node = remove_result(node);
 				continue;
@@ -150,7 +153,6 @@ int xsend()
 
 		buffer_queue_detroy(c->send_queue);
 		c->send_queue = node->buf_queue;
-		zlog_debug(z_cate, "·¢ËÍÊý¾Ý len=%d", c->send_queue->size);
 		ret = packet_send(c);
 		if(ret == SEND_FAILED){
 			zlog_debug(z_cate, "ret = SEND_FAILED");
@@ -170,22 +172,16 @@ int push_complate_packet(conn_rec *c)
 
 int length_to_read(conn_rec *c)
 {
-	int nlen = 0;
 	if (c->recv_queue->size < sizeof(int)){
 		return sizeof(int)-c->recv_queue->size;
 	}else{
 		int *len = (int *)c->recv_queue->p_head->buffer;
-		char buff[10];
-		sprintf(buff,"%d",*len);
-		nlen = atoi(buff);
-		zlog_error(z_cate, "length_to_read nlen=%d", nlen);
 		if(*len >= MAX_DATALEN){
-			//data length is too large
-			zlog_error(z_cate, "data length is too large %d", *len);
+			zlog_error(z_cate, "æ•°æ®åŒ…é•¿åº¦è¶…è¿‡æœ€å¤§é™å®šå€¼ %d", *len);
 			atomic_set(&c->aborted, 1);
 			return -1;
-		}else if(nlen <= 0){
-			zlog_error(z_cate, "data qlength is error *len=%d nlen=%d", *len, nlen);
+		}else if(*len <= 0){
+			zlog_error(z_cate, "æ•°æ®é•¿åº¦é”™è¯¯ é•¿åº¦ä¸º=%d", *len);
 			atomic_set(&c->aborted, 1);
 			return -1;
 		}
@@ -197,14 +193,12 @@ int packet_recv(conn_rec *c)
 {
 	int aborted = 0, begin = 0, readlen = 0;
 	int recvlen = 0;
-	int total_recvlen = 0;
 	int needlen = 0;
 	WSABUF buf;
 	DWORD dwFlags = 0;
 	DWORD dwBytes;
 	struct buffer_packet_t *packet = NULL;
 	
-	c->operation_type |= OP_READ;
 	needlen = length_to_read(c);
 	if(needlen == -1){
 		return RECV_FAILED;
@@ -215,15 +209,14 @@ int packet_recv(conn_rec *c)
 
 	packet = buffer_queue_last(c->recv_queue);
 	begin = DATA_BUFSIZE - packet->remain_size;
-	readlen = needlen-total_recvlen<packet->remain_size?needlen-total_recvlen:packet->remain_size;
+	readlen = needlen<packet->remain_size?needlen:packet->remain_size;
 	buf.buf = packet->buffer+begin;
 	buf.len = readlen;
-	
-	if(WSARecv(c->fd, &buf, 1, &dwBytes, &dwFlags, &c->ol, NULL) != NO_ERROR)
+	if(WSARecv(c->fd, &buf, 1, &dwBytes, &dwFlags, &c->recv_per_io_data.ol, NULL) != NO_ERROR)
 	{
 		if(WSAGetLastError() != WSA_IO_PENDING)
 		{
-			zlog_debug(z_cate, "½ÓÊÕÊý¾ÝÊ§°Ü. ´íÎó´úÂë:%d", WSAGetLastError());
+			zlog_debug(z_cate, "æŽ¥æ”¶æ•°æ®å¤±è´¥. é”™è¯¯ä»£ç :%d", WSAGetLastError());
 			return RECV_FAILED;
 		}
 	}	
@@ -241,7 +234,6 @@ int packet_send(conn_rec *c)
 	DWORD dwFlags = 0;
 	struct buffer_packet_t *packet = NULL;
 
-	c->operation_type |= OP_WRITE;
 	for(;;){
 		packet = buffer_queue_head(c->send_queue);
 		if(packet == NULL){
@@ -255,9 +247,9 @@ int packet_send(conn_rec *c)
 		}
 		wsabuf.buf = buf;
 		wsabuf.len = len;
-		if(WSASend(c->fd, &wsabuf, 1, &dwBytes, dwFlags, &c->ol, NULL) != NO_ERROR) {
+		if(WSASend(c->fd, &wsabuf, 1, &dwBytes, dwFlags, &c->send_per_io_data.ol, NULL) != NO_ERROR) {
 			if(WSAGetLastError() != WSA_IO_PENDING)
-				zlog_debug(z_cate, "·¢ËÍÊý¾ÝÊ§°Ü. ´íÎó´úÂë:%d", WSAGetLastError());
+				zlog_debug(z_cate, "å‘é€æ•°æ®å¤±è´¥. é”™è¯¯ä»£ç :%d", WSAGetLastError());
 				return SEND_FAILED;
 		}	
 		return SEND_AGAIN;
@@ -266,15 +258,17 @@ int packet_send(conn_rec *c)
 
 int s_connect(conn_rec *c)
 {
-	zlog_debug(z_cate, "¹Ø±ÕÌ×½Ó×Ö");
-	CancelIo((HANDLE)(c->fd));
-	closesocket(c->fd);
-	c->fd = INVALID_SOCKET;
-	if(!deref(c)){
-		pthread_mutex_lock(&conn_list_mutex);
-		zlog_debug(z_cate, "ÒÆ³ýÁ¬½Ó");
-		remove_connect(c);
-		pthread_mutex_unlock(&conn_list_mutex);
+	if(c->fd != INVALID_SOCKET){
+		zlog_debug(z_cate, "å…³é—­å¥—æŽ¥å­—");
+		CancelIo((HANDLE)(c->fd));
+		closesocket(c->fd);
+		c->fd = INVALID_SOCKET;
+		if(!deref(c)){
+			pthread_mutex_lock(&conn_list_mutex);
+			zlog_debug(z_cate, "ç§»é™¤è¿žæŽ¥");
+			remove_connect(c);
+			pthread_mutex_unlock(&conn_list_mutex);
+		}
 	}
 }
 

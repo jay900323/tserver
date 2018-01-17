@@ -1,12 +1,12 @@
-#ifndef _ROUTE_TABLE_H
+ï»¿#ifndef _ROUTE_TABLE_H
 #define _ROUTE_TABLE_H
 #include "apr_pools.h"
 #include "pthread.h"
 
 typedef struct route_rec_t{
 	apr_pool_t *pool;
-	char *hd_node; /*ºó´ú½Úµã*/
-	char *next_node; /*µ½´ï¸Ã½ÚµãµÄÂ·¾¶ËùÑ¡È¡µÄÏÂÒ»¸ö½Úµã*/
+	char *hd_node; /*åä»£èŠ‚ç‚¹*/
+	char *next_node; /*åˆ°è¾¾è¯¥èŠ‚ç‚¹çš„è·¯å¾„æ‰€é€‰å–çš„ä¸‹ä¸€ä¸ªèŠ‚ç‚¹*/
 	struct route_rec_t *next;
 }route_rec;
 

@@ -1,4 +1,4 @@
-#ifndef _WORKER_H
+ï»¿#ifndef _WORKER_H
 #define _WORKER_H
 
 #include "connect.h"
@@ -27,11 +27,11 @@ struct job_queue{
     unsigned short   max_size;
     unsigned short   size;
 };
-/*º¯Êı¹¦ÄÜ: ½«½ÓÊÕµ½µÄÍêÕûÊı¾İ°ü·Åµ½ÈÎÎñ¶ÓÁĞ*/
+/*å‡½æ•°åŠŸèƒ½: å°†æ¥æ”¶åˆ°çš„å®Œæ•´æ•°æ®åŒ…æ”¾åˆ°ä»»åŠ¡é˜Ÿåˆ—*/
 void push_packet(struct buffer_queue_t *buf_queue, conn_rec *c);
-/*º¯Êı¹¦ÄÜ: ´ÓÈÎÎñ¶ÓÁĞÖĞÒÆ³ı²¢Ïú»Ù¸ÃÈÎÎñÊı¾İ°ü*/
+/*å‡½æ•°åŠŸèƒ½: ä»ä»»åŠ¡é˜Ÿåˆ—ä¸­ç§»é™¤å¹¶é”€æ¯è¯¥ä»»åŠ¡æ•°æ®åŒ…*/
 struct buffer_queue_t *remove_packet(struct job_node_t *j);
-/*º¯Êı¹¦ÄÜ: ´ÓÈÎÎñ¶ÓÁĞµ¯³öµÚÒ»¸öÊı¾İ°ü*/
+/*å‡½æ•°åŠŸèƒ½: ä»ä»»åŠ¡é˜Ÿåˆ—å¼¹å‡ºç¬¬ä¸€ä¸ªæ•°æ®åŒ…*/
 struct job_node_t *pop_front_packet();
 void job_node_destroy(struct job_node_t *node);
 void push_result(struct buffer_queue_t *buf_queue, conn_rec *c);

@@ -1,4 +1,4 @@
-#include <apr_hash.h>
+﻿#include <apr_hash.h>
 #include <time.h>
 #include "config.h"
 #include "parser_bson_data.h"
@@ -10,7 +10,11 @@ static struct _bson_parser
   struct command_req * (*pfParse)(bson_iter_t *);
 }bson_parser[]={
   {"connect", parser_bson_connect},
-  {"exc_cmd_ok",parser_bson_exc_cmd_ok}
+  {"exc_cmd_ok",parser_bson_exc_cmd_ok},
+  {"file_upload_ok",parser_bson_file_upload_ok},
+  {"file_upload_error",parser_bson_file_upload_error},
+  {"file_download_ok",parser_bson_file_download_ok},
+  {"file_download_error",parser_bson_file_download_error},
 };
 
 static apr_hash_t* bson_parse_hash = NULL;
@@ -81,12 +85,7 @@ struct command_rec_t * parser_bson_connect(bson_iter_t *piter){
    return req;
 }
 
-struct command_rec_t * parser_bson_exc_cmd_ok(bson_iter_t *piter){
-	   bool error = false ;
-	   bson_subtype_t    subtype;
-	   uint32_t uuidlen;
-	   const uint8_t *uuidbin;
-	   struct command_rec_t*  req =  command_rec_new(COMMAND_TYPE_CMD_OK);
+void parser_bson_error(bson_iter_t *piter,struct command_rec_t*  req){
 	   while (bson_iter_next (piter))
 	   {
 		  const char *key = bson_iter_key(piter);
@@ -94,11 +93,111 @@ struct command_rec_t * parser_bson_exc_cmd_ok(bson_iter_t *piter){
 			   if (BSON_ITER_HOLDS_UTF8(piter))
 			   {
 			     const char *info = bson_iter_utf8 (piter, NULL);
-			     req->data.exc_cmd_ok.info = apr_pstrdup(req->pool, info);
+			     switch(req->type){
+			      case COMMAND_TYPE_FILEULD_ERROR:
+			         req->data.file_upload_error.info = apr_pstrdup(req->pool, info);
+			         break;
+			     }
+			   }
+		   }
+	   }
+}
+
+void parser_bson_ok(bson_iter_t *piter,struct command_rec_t*  req){
+	   while (bson_iter_next (piter))
+	   {
+		  const char *key = bson_iter_key(piter);
+		  if(strcmp(key,"info") == 0) {
+			   if (BSON_ITER_HOLDS_UTF8(piter))
+			   {
+			     const char *info = bson_iter_utf8 (piter, NULL);
+			     switch(req->type){
+			       case COMMAND_TYPE_CMD_OK:
+			          req->data.exc_cmd_ok.info = apr_pstrdup(req->pool, info);
+			          break;
+			       case COMMAND_TYPE_FILEULD_OK:
+			    	  req->data.file_upload_ok.info = apr_pstrdup(req->pool, info);
+			    	  break;
+			     }
+			   }
+		   }
+	   }
+}
+
+struct command_rec_t * parser_bson_file_upload_ok(bson_iter_t *piter){
+	   struct command_rec_t*  req =  command_rec_new(COMMAND_TYPE_FILEULD_OK);
+	   parser_bson_ok(piter, req);
+	   return req;
+}
+
+struct command_rec_t * parser_bson_file_upload_error(bson_iter_t *piter){
+	   struct command_rec_t*  req =  command_rec_new(COMMAND_TYPE_FILEULD_ERROR);
+	   parser_bson_error(piter,req);
+	   return req;
+}
+
+struct command_rec_t * parser_bson_file_download_ok(bson_iter_t *piter){
+	   struct command_rec_t*  req =  command_rec_new(COMMAND_TYPE_FILEDLD_OK);
+	   while (bson_iter_next (piter))
+	   {
+		  const char *key = bson_iter_key(piter);
+		  if(strcmp(key,"filename") == 0) {
+			   if (BSON_ITER_HOLDS_UTF8(piter))
+			   {
+			     const char *filename = bson_iter_utf8 (piter, NULL);
+			     req->data.file_download_ok.filename = apr_pstrdup(req->pool,filename);
+			   }
+		  }
+		  if(strcmp(key,"content") == 0) {
+			   if (BSON_ITER_HOLDS_BINARY(piter))
+			   {
+				   bson_iter_binary (piter,BSON_SUBTYPE_BINARY, req->data.file_download_ok.filesize,
+						   &req->data.file_download_ok.content);
 			   }
 		   }
 	   }
 	   return req;
+}
+
+struct command_rec_t * parser_bson_file_download_error(bson_iter_t *piter){
+	   struct command_rec_t*  req =  command_rec_new(COMMAND_TYPE_FILEDLD_ERROR);
+	   parser_bson_error(piter,req);
+	   return req;
+}
+
+struct command_rec_t * parser_bson_exc_cmd_ok(bson_iter_t *piter){
+	   struct command_rec_t*  req =  command_rec_new(COMMAND_TYPE_CMD_OK);
+	   parser_bson_ok(piter, req);
+	   return req;
+}
+
+void  parse_header(bson_iter_t *piter,char* uuid,char* src,char* dest){
+	   while (bson_iter_next (piter))
+	   {
+		   const char *key = bson_iter_key(piter);
+		   if(strcmp(key,"dest") == 0)
+		   {
+			   if (BSON_ITER_HOLDS_UTF8(piter))
+			   {
+			         const char *dst = bson_iter_utf8 (piter, NULL);
+			   	     strcpy(dest,dst);
+			   	}
+		   }else if(strcmp(key,"src") == 0)
+		   {
+			   if (BSON_ITER_HOLDS_UTF8(piter))
+			   {
+			     const char *s = bson_iter_utf8 (piter, NULL);
+			     strcpy(src,s);
+			   }
+		   }else if(strcmp(key,"uuid") == 0)
+		   {
+			   if (BSON_ITER_HOLDS_UTF8(piter))
+			   {
+				   const char *u = bson_iter_utf8 (piter, NULL);
+				   strcpy(uuid,u);
+			   }
+		   }
+	   }
 }
 
 struct command_rec_t *parse_bson(uint8_t * my_data, size_t my_data_len){
@@ -107,8 +206,14 @@ struct command_rec_t *parse_bson(uint8_t * my_data, size_t my_data_len){
     size_t err_offset;
 	bson_t bson;
 	bson_iter_t iter;
+	char dest[62];
+	char src[62];
+	char uuid[62];
 	struct  command_rec_t *req = NULL;
-	struct _bson_parser *bp;
+	bool header_need = false ;
+	memset(uuid,0,sizeof(uuid));
+	memset(src,0,sizeof(src));
+	memset(dest,0,sizeof(dest));
 
 	if (bson_init_static (&bson, my_data, my_data_len))
 	 {
@@ -126,12 +231,18 @@ struct command_rec_t *parse_bson(uint8_t * my_data, size_t my_data_len){
 		            const uint8_t *document_data;
 		            uint32_t document_len;
 		            bson_iter_t document_iter;
+					 struct _bson_parser *bp;
+
 		            bson_iter_document (&iter, &document_len, &document_data);
 		            bson_init_static (&b_document, document_data, document_len);
 		            bson_iter_init (&document_iter, &b_document);
-		            
-		            if((bp=apr_hash_get( bson_parse_hash,key,APR_HASH_KEY_STRING)  )!= NULL){
-		            	req = bp->pfParse(&document_iter);
+		            if (strcmp(key,"header") == 0){
+		           		header_need = true;
+		           		parse_header(&document_iter,uuid, src, dest);
+		            }else{
+						if((bp=apr_hash_get( bson_parse_hash,key,APR_HASH_KEY_STRING)  )!= NULL){
+							req = bp->pfParse(&document_iter);
+						}
 		            }
 		            bson_destroy (&b_document);
 		       }
@@ -143,7 +254,22 @@ struct command_rec_t *parse_bson(uint8_t * my_data, size_t my_data_len){
 	    }
 	    bson_destroy (&bson);
 	 }
+	if(req && header_need){
+		req->uuid = apr_pstrdup(req->pool, uuid);
+		req->src = apr_pstrdup(req->pool, src);
+		req->dest = apr_pstrdup(req->pool, dest);
+
+	}
 	return req;
+}
+
+void encode_command_rep_header(bson_t * parent,struct  command_rec_t * rep){
+	 bson_t child_header;
+	 bson_append_document_begin (parent, "header", -1, &child_header);
+     BSON_APPEND_UTF8(&child_header, "dest", rep->dest ? rep->dest : "" );
+     BSON_APPEND_UTF8(&child_header, "src", rep->src ? rep->src : "" );
+	 BSON_APPEND_UTF8(&child_header, "uuid", rep->uuid ? rep->uuid : "" );
+	 bson_append_document_end (parent, &child_header);
 }
 
 bson_t *  encode_command_rep_to_bson (struct  command_rec_t * rep){
@@ -151,11 +277,8 @@ bson_t *  encode_command_rep_to_bson (struct  command_rec_t * rep){
 	  bson_t child_header;
 	  bson_t * b_object = bson_new();
 	  bool error = FALSE;
-      bson_append_document_begin (b_object, "header", -1, &child_header);
-	  BSON_APPEND_UTF8(&child_header, "dest", rep->dest ? rep->dest : "" );
-	  BSON_APPEND_UTF8(&child_header, "src", rep->src ? rep->src : "" );
-	  BSON_APPEND_UTF8(&child_header, "uuid", rep->uuid ? rep->uuid : "" );
-	  bson_append_document_end (b_object, &child_header);
+
+	  encode_command_rep_header(b_object,rep);
 	  switch (rep->type)
 	  {
 	    case  COMMAND_TYPE_OK:
@@ -175,6 +298,22 @@ bson_t *  encode_command_rep_to_bson (struct  command_rec_t * rep){
 	   	    }
 	   	    bson_append_document_end (b_object, &child);
 	   	    break;
+	    case COMMAND_TYPE_FILEULD:
+	        bson_append_document_begin (b_object, "fileupload", -1, &child);
+	 	   	if(rep->data.file_upload.content){
+	 	   		 zlog_info(z_cate,"filename :%s len=%d",rep->data.file_upload.filename, rep->data.file_upload.filesize);
+	 	   		 BSON_APPEND_BINARY (&child, "content", BSON_SUBTYPE_BINARY, rep->data.file_upload.content, rep->data.file_upload.filesize);
+	 	   	     BSON_APPEND_UTF8(&child, "filename", rep->data.file_upload.filename);
+	 	   	 }
+	 	   	 bson_append_document_end (b_object, &child);
+	    	break;
+	    case COMMAND_TYPE_FILEDLD:
+	    	bson_append_document_begin (b_object, "filedownload", -1, &child);
+	    	if(rep->data.file_download.filepath){
+	    		zlog_info(z_cate,"download filepath :%s",rep->data.file_download.filepath);
+	    		BSON_APPEND_UTF8(&child, "filepath", rep->data.file_download.filepath);
+	    	}
+	    	bson_append_document_end (b_object, &child);
 	    default:
 	    	zlog_error(z_cate,"BSON for type '%d' not implemmented", rep->type);
 	        error = TRUE;

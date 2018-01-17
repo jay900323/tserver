@@ -1,4 +1,4 @@
-#include "worker.h"
+ï»¿#include "worker.h"
 #include <pthread.h>
 #include "atomic.h"
 #include "command.h"
@@ -23,7 +23,7 @@ void init_work_thread()
 	result_queue.size = 0;
 
 	 if(apr_pool_create(&queue_pool, server_rec) != APR_SUCCESS){
-		 zlog_error(z_cate, "¶ÓÁĞÄÚ´æ³Ø³õÊ¼»¯Ê§°Ü!");
+		 zlog_error(z_cate, "é˜Ÿåˆ—å†…å­˜æ± åˆå§‹åŒ–å¤±è´¥!");
 		 return;
 	 }
 
@@ -142,7 +142,7 @@ struct buffer_queue_t *remove_result(struct job_node_t *j)
 	return ret;
 }
 
-/*´¦ÀíÒ»¸öÊı¾İ°ü²¢·µ»ØÊı¾İ*/
+/*å¤„ç†ä¸€ä¸ªæ•°æ®åŒ…å¹¶è¿”å›æ•°æ®*/
 struct buffer_queue_t * do_packet(struct job_node_t *job)
 {
 	struct command_rec_t *req = NULL;
@@ -181,7 +181,7 @@ void *work_thread(void *p)
 	struct job_node_t *first = NULL;
 	struct buffer_queue_t *result_buf = NULL;
 
-	zlog_info(z_cate, "¹¤×÷Ïß³ÌÒÑÆô¶¯ tid=%lu!", pthread_self());
+	zlog_info(z_cate, "å·¥ä½œçº¿ç¨‹å·²å¯åŠ¨ tid=%lu!", pthread_self());
 	while(!server_stop){
 		pthread_mutex_lock(&packet_queue_mutex);
 		while(NULL == (first = pop_front_packet())){
@@ -194,11 +194,11 @@ void *work_thread(void *p)
 		}
 		pthread_mutex_unlock(&packet_queue_mutex);
 		if(atomic_read(&first->con->aborted) > 0){
-			zlog_info(z_cate, "Á¬½ÓÒÑ¾­¶Ï¿ª²»ÓÃ·µ»ØÊı¾İÁË.");
+			zlog_info(z_cate, "è¿æ¥å·²ç»æ–­å¼€ä¸ç”¨è¿”å›æ•°æ®äº†.");
 			job_node_destroy(first);
 			continue;
 		}
-		zlog_debug(z_cate, "½ÓÊÕµ½Ò»¸öÊı¾İ°ü.");
+		zlog_debug(z_cate, "æ¥æ”¶åˆ°ä¸€ä¸ªæ•°æ®åŒ….");
 
 		result_buf = do_packet(first);
 		if(result_buf){

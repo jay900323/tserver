@@ -1,7 +1,10 @@
-#include<stdio.h>
+﻿#include <stdio.h>
 #include <time.h>
+#ifdef _WIN32
 #include <Windows.h>
-#include"util.h"
+#endif
+#include "util.h"
+#include "apr_strings.h"
 
 
 #define UUID_FORMAT "0x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
@@ -46,4 +49,53 @@ void t_sleep_loop(int second)
 #elif __linux__
 	sleep(second);
 #endif
+}
+
+int t_getfilename(apr_pool_t *pool, char *filename, char **buf)
+{
+	char *pos = filename;
+	while(*pos){
+		pos++;
+	}
+	pos--;
+	while(*pos && pos != filename){
+		if(*pos == '/' || *pos == '\\'){
+			pos++;
+			if(*pos){
+				*buf = apr_pstrdup(pool, pos);
+				return 0;
+			}else{
+				return -1;
+			}
+		}
+		pos--;
+	}
+	return -1;
+}
+
+int t_readfile(apr_pool_t *pool, char *filename, char **buf)
+{
+	FILE *fp = 0;
+	int file_len = 0;
+	int ret = 1;
+	char *buffer = NULL;
+
+	if((fp=fopen(filename, "rb"))== NULL){
+		return 0;
+	}
+	fseek(fp, 0L, SEEK_END);
+	file_len = ftell(fp);
+	fseek(fp, 0L, SEEK_SET);
+	buffer = *buf = (char*)apr_palloc(pool, file_len);
+
+	while(ret){
+		ret = fread(buffer, 1024, 1, fp);
+		if(ret == -1){
+			fclose(fp);
+			return 0;
+		}
+		buffer +=ret;
+	}
+	fclose(fp);
+	return file_len;
 }

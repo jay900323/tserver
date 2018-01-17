@@ -1,9 +1,21 @@
-#ifndef _CONNECT_H_
+ï»¿#ifndef _CONNECT_H_
 #define _CONNECT_H_
 
 #include "buffer_queue.h"
 #include "config.h"
 #include "atomic.h"
+
+#ifdef _WIN32
+
+#define OP_READ 1
+#define OP_WRITE 2
+
+typedef struct per_io_data_t{
+	OVERLAPPED ol;
+	int operation_type;
+
+}per_io_data;
+#endif
 
 typedef struct context_rec_t{
 	/* pool of connect_rec */
@@ -37,9 +49,16 @@ typedef struct conn_rec_t{
 
 	/*buf of recive*/
 	struct buffer_queue_t *recv_queue;
+#ifdef _WIN32
+	/*recv overlapped struct */
+	per_io_data recv_per_io_data;
+#endif
 	/*buf of send*/
 	struct buffer_queue_t *send_queue;
-
+#ifdef _WIN32
+	/*send overlapped struct */
+	per_io_data send_per_io_data;
+#endif
 	/*fd*/
 	int fd;
 	/*heartbeat count*/
@@ -52,10 +71,6 @@ typedef struct conn_rec_t{
 	/*use for the conn_rec list*/
 	struct conn_rec_t *before;
 	struct conn_rec_t *next;
-#ifdef _WIN32
-	OVERLAPPED ol;
-	int operation_type;
-#endif
 }conn_rec;
 
 typedef struct conn_rec_list_t
@@ -66,11 +81,11 @@ typedef struct conn_rec_list_t
 }conn_rec_list;
 
 conn_rec *create_conn(int fd, const char *remote_ip, int remote_port);
-/*½«Á¬½Ó¶ÔÏó´ÓÁ´±íÖĞÒÆ³ı*/
+/*å°†è¿æ¥å¯¹è±¡ä»é“¾è¡¨ä¸­ç§»é™¤*/
 conn_rec *remove_connect(conn_rec *c);
-/*½«Á¬½Ó¶ÔÏóÌí¼Óµ½Á´±í*/
+/*å°†è¿æ¥å¯¹è±¡æ·»åŠ åˆ°é“¾è¡¨*/
 void add_connect(conn_rec *c);
-/*ÊÍ·ÅÁ¬½Ó¶ÔÏóËùÕ¼ÓÃµÄÄÚ´æ¿Õ¼ä*/
+/*é‡Šæ”¾è¿æ¥å¯¹è±¡æ‰€å ç”¨çš„å†…å­˜ç©ºé—´*/
 void release_connect(conn_rec *c);
 void addref(conn_rec *c);
 int deref(conn_rec *c);
